@@ -269,8 +269,8 @@ input[type="date"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;-
     <div class="fg"><label>Idade</label><div class="badge" id="b-idade">—</div></div>
   </div>
   <div class="r2">
-    <div class="fg"><label>Altura (m)</label><input type="text" id="altura" inputmode="numeric" maxlength="4" placeholder="1,74" oninput="maskDec(this,2)" onblur="formatDecOnBlur(this,2)"></div>
-    <div class="fg"><label>Peso (kg)</label><input type="text" id="peso" inputmode="numeric" maxlength="6" placeholder="78,5" oninput="maskDec(this,1)" onblur="formatDecOnBlur(this,1)"></div>
+    <div class="fg"><label>Altura (m)</label><input type="text" id="altura" inputmode="decimal" placeholder="Ex: 1,74" oninput="atualizarIMC()"></div>
+    <div class="fg"><label>Peso (kg)</label><input type="text" id="peso" inputmode="decimal" placeholder="Ex: 78,5" oninput="atualizarIMC()"></div>
   </div>
   <div class="fg">
     <label>Objetivo</label>
