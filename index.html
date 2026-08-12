@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plano Alimentar – @fabianamentora.oficial (Mobile)</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f0;color:#222;font-size:14px;overflow-x:hidden}
+button,input,select,textarea{touch-action:manipulation}
 .app-header{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .app-header h1{font-size:1rem;font-weight:700}
 .layout{display:flex;min-height:calc(100vh - 48px)}
@@ -33,7 +34,7 @@ input[type="date"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;-
 .pi.on{border-color:#7c3aed;background:#faf5ff;color:#5b21b6;font-weight:600}
 .pi .ico{font-size:.88rem;flex-shrink:0}
 
-.btn-p{width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:.88rem;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s}
+.btn-p{width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:.88rem;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;touch-action:manipulation}
 .btn-p:hover{opacity:.9}
 .btn-i{width:100%;margin-top:6px;padding:9px;background:#059669;color:#fff;font-size:.82rem;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s}
 .btn-i:hover{opacity:.88}
@@ -186,8 +187,8 @@ input[type="date"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;-
   /* lock pills */
   .lck{font-size:.72rem;padding:5px 12px}
   .lock-row{gap:6px}
-  /* inputs */
-  .fg input,.fg select,.fg textarea{padding:10px 12px;font-size:.88rem}
+  /* inputs - font-size 16px previne zoom automático no iOS */
+  .fg input,.fg select,.fg textarea{padding:10px 12px;font-size:16px}
   input[type="date"]{width:100%!important;min-width:0!important;font-size:.82rem;padding:10px 8px}
   .fg label{font-size:.7rem}
   /* buttons */
@@ -318,18 +319,18 @@ input[type="date"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;-
       </div>
       <div class="r2">
         <div class="fg"><label>Data</label><input type="date" id="af-data" style="width:100%;min-width:0;max-width:100%;box-sizing:border-box;-webkit-appearance:none"></div>
-        <div class="fg"><label>Peso (kg)</label><input type="text" id="af-peso" inputmode="decimal" maxlength="6" placeholder="Ex: 72,5" oninput="maskDec(this,1)"></div>
+        <div class="fg"><label>Peso (kg)</label><input type="text" id="af-peso" inputmode="decimal" placeholder="Ex: 72,5"></div>
       </div>
       <div id="af-bio-extra" style="display:none">
         <div class="r2">
-          <div class="fg"><label>Gordura Corporal (%)</label><input type="text" id="af-gordura" inputmode="decimal" maxlength="5" placeholder="Ex: 28,5" oninput="maskDec(this,1)"></div>
-          <div class="fg"><label>Massa Magra (kg)</label><input type="text" id="af-magra" inputmode="decimal" maxlength="6" placeholder="Ex: 56,2" oninput="maskDec(this,1)"></div>
+          <div class="fg"><label>Gordura Corporal (%)</label><input type="text" id="af-gordura" inputmode="decimal" placeholder="Ex: 28,5"></div>
+          <div class="fg"><label>Massa Magra (kg)</label><input type="text" id="af-magra" inputmode="decimal" placeholder="Ex: 56,2"></div>
         </div>
         <div class="r2">
-          <div class="fg"><label>Gordura Visceral</label><input type="text" id="af-visceral" inputmode="numeric" maxlength="3" placeholder="Ex: 8" oninput="maskInt(this)"></div>
-          <div class="fg"><label>Caloria Basal (kcal)</label><input type="text" id="af-kcal" inputmode="numeric" maxlength="5" placeholder="Ex: 1480" oninput="maskInt(this)"></div>
+          <div class="fg"><label>Gordura Visceral</label><input type="text" id="af-visceral" inputmode="numeric" placeholder="Ex: 8"></div>
+          <div class="fg"><label>Caloria Basal (kcal)</label><input type="text" id="af-kcal" inputmode="numeric" placeholder="Ex: 1480"></div>
         </div>
-        <div class="fg"><label>Idade Metabólica</label><input type="text" id="af-idademet" inputmode="numeric" maxlength="3" placeholder="Ex: 38" oninput="maskInt(this)"></div>
+        <div class="fg"><label>Idade Metabólica</label><input type="text" id="af-idademet" inputmode="numeric" placeholder="Ex: 38"></div>
       </div>
       <button class="btn-salvar-aval" onclick="salvarAval()">✅ Salvar Avaliação</button>
       <button class="btn-cancel-aval" onclick="cancelAval()">Cancelar</button>
