@@ -269,8 +269,8 @@ input[type="date"]{min-width:0;width:100%;box-sizing:border-box}
     <div class="fg"><label>Idade</label><div class="badge" id="b-idade">—</div></div>
   </div>
   <div class="r2">
-    <div class="fg"><label>Altura (m)</label><input type="text" id="altura" inputmode="decimal" maxlength="4" placeholder="1,74" oninput="maskDec(this,2)"></div>
-    <div class="fg"><label>Peso (kg)</label><input type="text" id="peso" inputmode="decimal" maxlength="6" placeholder="78,5" oninput="maskDec(this,1)"></div>
+    <div class="fg"><label>Altura (m)</label><input type="text" id="altura" inputmode="decimal" maxlength="4" placeholder="1,74" oninput="maskDec(this,2)" onblur="formatDecOnBlur(this,2)"></div>
+    <div class="fg"><label>Peso (kg)</label><input type="text" id="peso" inputmode="decimal" maxlength="6" placeholder="78,5" oninput="maskDec(this,1)" onblur="formatDecOnBlur(this,1)"></div>
   </div>
   <div class="fg">
     <label>Objetivo</label>
@@ -650,10 +650,20 @@ function calcIdade(s){
   return i;
 }
 function maskDec(el,maxDec){
+  // Durante digitação: só filtra caracteres inválidos
   let v=el.value.replace(/[^\d,]/g,'');
   const p=v.split(',');
   if(p.length>2) v=p[0]+','+p.slice(1).join('');
   if(maxDec!=null&&p.length===2&&p[1].length>maxDec) v=p[0]+','+p[1].slice(0,maxDec);
+  el.value=v;
+  atualizarIMC();
+}
+function formatDecOnBlur(el,maxDec){
+  // Ao sair do campo: auto-insere vírgula se não tiver
+  let v=el.value.replace(/[^\d,]/g,'');
+  if(v&&!v.includes(',')&&v.length>maxDec){
+    v=v.slice(0,v.length-maxDec)+','+v.slice(v.length-maxDec);
+  }
   el.value=v;
   atualizarIMC();
 }
