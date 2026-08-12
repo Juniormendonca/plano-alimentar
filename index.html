@@ -158,6 +158,7 @@ input[type="date"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;-
 .tab-bar{display:none;background:#1e1b4b;position:sticky;top:0;z-index:200;border-bottom:2px solid #4f46e5}
 .tab-btn{flex:1;padding:14px 8px;font-size:.88rem;font-weight:700;border:none;background:transparent;color:#a5b4fc;cursor:pointer;transition:all .2s;border-bottom:3px solid transparent}
 .tab-btn.act{color:#fff;border-bottom-color:#a855f7;background:rgba(255,255,255,.09)}
+#tab-btn-plan.act{border-bottom-color:#34d399;background:rgba(52,211,153,.12);color:#6ee7b7}
 .tab-panel{display:block}
 .mobile-fab-group{display:none;position:fixed;bottom:22px;right:18px;z-index:300;flex-direction:column;gap:10px;align-items:flex-end}
 .mobile-fab{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:50px;padding:14px 22px;font-size:.9rem;font-weight:700;box-shadow:0 6px 24px rgba(124,58,237,.4);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
@@ -545,29 +546,32 @@ async function gerarPDF(btn){
         scrollY:0,
         allowTaint:true,
         backgroundColor:'#ffffff',
-        onclone:(_doc,el)=>{
-          // Força largura idêntica ao .doc para não colapsar no contexto isolado do clone
-          el.style.width=CAPTURE_W+'px';
-          el.style.maxWidth=CAPTURE_W+'px';
-          el.style.boxSizing='border-box';
-          el.style.minHeight='auto';
-          el.style.overflow='visible';
-          el.style.padding='24px 32px';
-          el.style.borderTop='none';
-          el.style.backgroundColor='#ffffff';
-          // Remove margens negativas da imagem banner
-          el.querySelectorAll('.bimg').forEach(img=>{
-            img.style.cssText='display:block;width:100%!important;margin:0 0 18px 0!important;height:auto!important';
-          });
+        onclone:(documentClone,el)=>{
+          try{
+            const target=el||documentClone.querySelectorAll('.page')[i];
+            if(!target)return;
+            target.style.width=CAPTURE_W+'px';
+            target.style.maxWidth=CAPTURE_W+'px';
+            target.style.boxSizing='border-box';
+            target.style.minHeight='auto';
+            target.style.overflow='visible';
+            target.style.padding='24px 32px';
+            target.style.borderTop='none';
+            target.style.backgroundColor='#ffffff';
+            target.querySelectorAll('.bimg').forEach(img=>{
+              img.style.cssText='display:block;width:100%!important;margin:0 0 18px 0!important;height:auto!important';
+            });
+          }catch(e){}
         }
       });
+      if(!canvas||canvas.width===0||canvas.height===0) throw new Error('Não foi possível capturar o plano. Tente gerar novamente.');
       if(i>0) pdf.addPage();
       const imgData=canvas.toDataURL('image/jpeg',0.94);
       const ratio=canvas.height/canvas.width;
-      // Preenche toda a largura útil do A4
       let iW=cW, iH=iW*ratio;
       const maxH=297-MT-MB;
       if(iH>maxH){iH=maxH;iW=iH/ratio;}
+      if(!imgData||imgData==='data:,'||iW<=0||iH<=0) throw new Error('Imagem inválida na página '+(i+1)+'. Tente gerar o plano novamente.');
       pdf.addImage(imgData,'JPEG',ML,MT,iW,iH);
     }
     pdf.save(filename);
@@ -613,16 +617,21 @@ async function compartilharPlano(btn){
       const canvas=await html2canvas(pages[i],{
         scale:2,useCORS:true,logging:false,scrollX:0,scrollY:0,
         allowTaint:true,backgroundColor:'#ffffff',
-        onclone:(_doc,el)=>{
-          el.style.width=CAPTURE_W+'px';el.style.maxWidth=CAPTURE_W+'px';
-          el.style.boxSizing='border-box';el.style.minHeight='auto';
-          el.style.overflow='visible';el.style.padding='24px 32px';
-          el.style.borderTop='none';el.style.backgroundColor='#ffffff';
-          el.querySelectorAll('.bimg').forEach(img=>{
-            img.style.cssText='display:block;width:100%!important;margin:0 0 18px 0!important;height:auto!important';
-          });
+        onclone:(documentClone,el)=>{
+          try{
+            const target=el||documentClone.querySelectorAll('.page')[i];
+            if(!target)return;
+            target.style.width=CAPTURE_W+'px';target.style.maxWidth=CAPTURE_W+'px';
+            target.style.boxSizing='border-box';target.style.minHeight='auto';
+            target.style.overflow='visible';target.style.padding='24px 32px';
+            target.style.borderTop='none';target.style.backgroundColor='#ffffff';
+            target.querySelectorAll('.bimg').forEach(img=>{
+              img.style.cssText='display:block;width:100%!important;margin:0 0 18px 0!important;height:auto!important';
+            });
+          }catch(e){}
         }
       });
+      if(!canvas||canvas.width===0||canvas.height===0) throw new Error('Não foi possível capturar o plano.');
       if(i>0) pdf.addPage();
       const imgData=canvas.toDataURL('image/jpeg',0.94);
       const ratio=canvas.height/canvas.width;
@@ -632,22 +641,26 @@ async function compartilharPlano(btn){
       pdf.addImage(imgData,'JPEG',ML,MT,iW,iH);
     }
 
-    // Tenta Web Share API (iOS/Android nativo)
-    if(navigator.canShare&&navigator.share){
-      const blob=pdf.output('blob');
-      const file=new File([blob],filename,{type:'application/pdf'});
-      if(navigator.canShare({files:[file]})){
+    // Tenta Web Share API — funciona no iOS Safari e Chrome Android
+    if(navigator.share){
+      try{
+        const blob=pdf.output('blob');
+        const file=new File([blob],filename,{type:'application/pdf'});
         await navigator.share({files:[file],title:'Plano Alimentar Personalizado',text:'Seu plano alimentar personalizado Herbalife 🌿'});
         restore(); return;
+      }catch(shareErr){
+        if(shareErr.name==='AbortError'){restore();return;} // cancelou
+        // Share sem arquivos não suportado — faz download
       }
     }
     // Fallback: download direto
     pdf.save(filename);
+    alert('💡 Para enviar pelo WhatsApp: abra o arquivo PDF salvo → compartilhe via WhatsApp normalmente.');
   }catch(err){
-    if(err&&err.name==='AbortError'){restore();return;} // usuário cancelou share
+    if(err&&err.name==='AbortError'){restore();return;}
     console.error('Share error:',err);
-    // Fallback silencioso: tenta download
     try{pdf.save(filename);}catch(e2){}
+    alert('Erro ao gerar: '+err.message);
   }
   restore();
 }
@@ -688,7 +701,6 @@ function toggleMic(fieldId,btnId,statusId){
     if(final){
       baseText=(baseText?baseText+' ':'')+final;
       document.getElementById(fieldId).value=baseText;
-      gerar();
     }
     status.textContent=interim?`🎙️ "${interim}"…`:'🎙️ Gravando... fale agora';
   };
@@ -699,9 +711,8 @@ function toggleMic(fieldId,btnId,statusId){
   micRecognition.onend=()=>{
     micActive=false;
     btn.textContent='🎙️';btn.style.background=btnColor;
-    status.textContent='✅ Gravação finalizada';
-    setTimeout(()=>{status.style.display='none';},2000);
-    gerar();
+    status.textContent='✅ Gravação finalizada — clique em Gerar para atualizar o plano';
+    setTimeout(()=>{status.style.display='none';},3000);
   };
   micRecognition.start();
 }
