@@ -17,7 +17,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f0;color:#222;font-
 .fg{margin-bottom:9px}
 .fg label{display:block;font-size:.66rem;font-weight:700;color:#666;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em}
 .fg input,.fg select,.fg textarea{width:100%;padding:6px 9px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.8rem;background:#fafafa;outline:none;transition:border-color .2s}
-input[type="date"]{min-width:0;width:100%;box-sizing:border-box}
+input[type="date"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;-webkit-appearance:none;font-size:.82rem}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#7c3aed;background:#fff}
 .fg textarea{resize:vertical;min-height:44px}
 .r2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
@@ -263,14 +263,14 @@ input[type="date"]{min-width:0;width:100%;box-sizing:border-box}
   </div>
   <h2>👤 Dados do Cliente</h2>
   <div class="fg"><label>Nome</label><input type="text" id="nome" placeholder="Ex: Damieli"></div>
-  <div class="fg"><label>Data do Plano</label><input type="date" id="dataP"></div>
+  <div class="fg"><label>Data do Plano</label><input type="date" id="dataP" style="width:100%;min-width:0;max-width:100%;box-sizing:border-box;-webkit-appearance:none"></div>
   <div class="r2">
-    <div class="fg"><label>Nascimento</label><input type="date" id="dataN" oninput="atualizarIMC()"></div>
+    <div class="fg"><label>Nascimento</label><input type="date" id="dataN" oninput="atualizarIMC()" style="width:100%;min-width:0;max-width:100%;box-sizing:border-box;-webkit-appearance:none"></div>
     <div class="fg"><label>Idade</label><div class="badge" id="b-idade">—</div></div>
   </div>
   <div class="r2">
-    <div class="fg"><label>Altura (m)</label><input type="text" id="altura" inputmode="decimal" maxlength="4" placeholder="1,74" oninput="maskDec(this,2)" onblur="formatDecOnBlur(this,2)"></div>
-    <div class="fg"><label>Peso (kg)</label><input type="text" id="peso" inputmode="decimal" maxlength="6" placeholder="78,5" oninput="maskDec(this,1)" onblur="formatDecOnBlur(this,1)"></div>
+    <div class="fg"><label>Altura (m)</label><input type="text" id="altura" inputmode="numeric" maxlength="4" placeholder="1,74" oninput="maskDec(this,2)" onblur="formatDecOnBlur(this,2)"></div>
+    <div class="fg"><label>Peso (kg)</label><input type="text" id="peso" inputmode="numeric" maxlength="6" placeholder="78,5" oninput="maskDec(this,1)" onblur="formatDecOnBlur(this,1)"></div>
   </div>
   <div class="fg">
     <label>Objetivo</label>
@@ -317,7 +317,7 @@ input[type="date"]{min-width:0;width:100%;box-sizing:border-box}
         </label>
       </div>
       <div class="r2">
-        <div class="fg"><label>Data</label><input type="date" id="af-data"></div>
+        <div class="fg"><label>Data</label><input type="date" id="af-data" style="width:100%;min-width:0;max-width:100%;box-sizing:border-box;-webkit-appearance:none"></div>
         <div class="fg"><label>Peso (kg)</label><input type="text" id="af-peso" inputmode="decimal" maxlength="6" placeholder="Ex: 72,5" oninput="maskDec(this,1)"></div>
       </div>
       <div id="af-bio-extra" style="display:none">
@@ -650,22 +650,24 @@ function calcIdade(s){
   return i;
 }
 function maskDec(el,maxDec){
-  // Durante digitação: só filtra caracteres inválidos
-  let v=el.value.replace(/[^\d,]/g,'');
-  const p=v.split(',');
-  if(p.length>2) v=p[0]+','+p.slice(1).join('');
-  if(maxDec!=null&&p.length===2&&p[1].length>maxDec) v=p[0]+','+p[1].slice(0,maxDec);
-  el.value=v;
+  // Só permite dígitos — vírgula inserida automaticamente
+  let digits=el.value.replace(/\D/g,'');
+  // Limita: altura max 3 dígitos (1,74), peso max 4 (100,5)
+  const maxD=maxDec===2?3:4;
+  if(digits.length>maxD) digits=digits.slice(0,maxD);
+  if(!digits){el.value='';atualizarIMC();return;}
+  if(digits.length<=maxDec){
+    // ex: "7" → "0,07" (maxDec=2), "5" → "0,5" (maxDec=1)
+    while(digits.length<maxDec) digits='0'+digits;
+    el.value='0,'+digits;
+  } else {
+    el.value=digits.slice(0,digits.length-maxDec)+','+digits.slice(digits.length-maxDec);
+  }
   atualizarIMC();
 }
 function formatDecOnBlur(el,maxDec){
-  // Ao sair do campo: auto-insere vírgula se não tiver
-  let v=el.value.replace(/[^\d,]/g,'');
-  if(v&&!v.includes(',')&&v.length>maxDec){
-    v=v.slice(0,v.length-maxDec)+','+v.slice(v.length-maxDec);
-  }
-  el.value=v;
-  atualizarIMC();
+  // Ao sair: garante formato correto
+  maskDec(el,maxDec);
 }
 
 function atualizarIMC(){
@@ -677,7 +679,7 @@ function atualizarIMC(){
   if(idadeEl) idadeEl.textContent=idade!==null?idade+' anos':'—';
   const imcEl=document.getElementById('b-imc');
   const imcCl=document.getElementById('b-imc-class');
-  if(alt&&peso&&alt>0){
+  if(alt&&peso&&alt>=1.0&&alt<=2.5&&peso>=20&&peso<=300){
     const imc=peso/(alt*alt);
     if(imcEl) imcEl.textContent=imc.toFixed(1).replace('.',',');
     let cls,bg,color;
@@ -806,7 +808,7 @@ function gerar(){
 
   // IMC auto
   let imcVal=null;
-  if(alt&&peso&&alt>0){
+  if(alt&&peso&&alt>=1.0&&alt<=2.5&&peso>=20&&peso<=300){
     imcVal=peso/(alt*alt);
     const imcEl=document.getElementById('b-imc');
     const imcCl=document.getElementById('b-imc-class');
