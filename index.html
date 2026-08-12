@@ -527,67 +527,79 @@ function gerarNomeArquivo(){
   return `Avaliação_${nomeLimpo}_${dd}-${mm}-${aaaa}_${plat}_v${v}.pdf`;
 }
 
+// Helper: captura todas as páginas e monta jsPDF com altura variável por página
+// Isso garante que o cabeçalho tenha SEMPRE a mesma largura (200mm) em todas as páginas
+async function _capturarEMontar(){
+  if(!window.jspdf||!window.jspdf.jsPDF) throw new Error('Biblioteca PDF não carregou. Recarregue a página e tente novamente.');
+  const docEl=document.getElementById('doc');
+  const {jsPDF}=window.jspdf;
+  const ML=5,MR=5,MT=5,MB=5;
+  const cW=210-ML-MR; // 200mm — largura fixa para header uniforme
+  const CAPTURE_W=800;
+  const pages=Array.from(docEl.querySelectorAll('.page'));
+
+  // 1. Captura todas as páginas
+  const canvases=[];
+  for(let i=0;i<pages.length;i++){
+    const canvas=await html2canvas(pages[i],{
+      scale:2,useCORS:true,logging:false,
+      scrollX:0,scrollY:0,allowTaint:true,backgroundColor:'#ffffff',
+      onclone:(documentClone,el)=>{
+        try{
+          const t=el||documentClone.querySelectorAll('.page')[i];
+          if(!t)return;
+          t.style.width=CAPTURE_W+'px';
+          t.style.maxWidth=CAPTURE_W+'px';
+          t.style.boxSizing='border-box';
+          t.style.minHeight='auto';   // altura natural do conteúdo
+          t.style.overflow='visible';
+          t.style.padding='0 32px 32px';
+          t.style.borderTop='none';
+          t.style.backgroundColor='#ffffff';
+          // bimg ocupa exatamente 800px: 100% da content-area (736px) + 2×32px de padding
+          t.querySelectorAll('.bimg').forEach(img=>{
+            img.style.cssText='display:block;width:calc(100% + 64px)!important;margin:0 -32px 18px!important;height:auto!important;max-width:none!important';
+          });
+        }catch(e){}
+      }
+    });
+    if(!canvas||canvas.width===0||canvas.height===0) throw new Error('Falha ao capturar página '+(i+1)+'. Gere o plano novamente.');
+    canvases.push(canvas);
+  }
+
+  // 2. Monta PDF com altura UNIFORME em todas as páginas
+  //    Usa a maior altura capturada → todas as páginas têm o mesmo tamanho
+  //    iW é SEMPRE cW=200mm → cabeçalho idêntico e do mesmo tamanho em toda página
+  const maxH=Math.max(...canvases.map(c=>c.height));
+  const iW=cW; // 200mm fixo
+  const uniformPageH=Math.ceil(iW*(maxH/canvases[0].width)+MT+MB);
+
+  let pdf=null;
+  for(let i=0;i<canvases.length;i++){
+    const canvas=canvases[i];
+    const naturalH=iW*(canvas.height/canvas.width); // altura real do conteúdo
+    const imgData=canvas.toDataURL('image/jpeg',0.92);
+    if(!imgData||imgData==='data:,') throw new Error('Imagem inválida na página '+(i+1));
+
+    if(i===0){
+      pdf=new jsPDF({unit:'mm',format:[210,uniformPageH],orientation:'portrait'});
+    } else {
+      pdf.addPage([210,uniformPageH]);
+    }
+    // Imagem em tamanho natural (sem esticar) — espaço em branco fica embaixo nas páginas curtas
+    pdf.addImage(imgData,'JPEG',ML,MT,iW,naturalH);
+  }
+  return pdf;
+}
+
 async function gerarPDF(btn){
   const docEl=document.getElementById('doc');
   if(docEl.querySelector('.em')){alert('Gere o plano primeiro antes de exportar o PDF.');return;}
   if(btn){btn.textContent='⏳ Gerando PDF...';btn.disabled=true;}
   const restore=()=>{if(btn){btn.textContent='🖨️ Salvar PDF';btn.disabled=false;}};
-
   const filename=gerarNomeArquivo();
-
-  if(!window.jspdf||!window.jspdf.jsPDF){
-    alert('Biblioteca PDF não carregou. Recarregue a página e tente novamente.');
-    restore(); return;
-  }
-
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
-  // A4 — margens mínimas para aproveitar a página toda
-  const ML=5,MR=5,MT=5,MB=5;
-  const cW=210-ML-MR; // 200mm de largura útil
-
-  const pages=Array.from(docEl.querySelectorAll('.page'));
-  // Largura de captura: mesma do .doc para reproduzir fielmente
-  const CAPTURE_W=800;
-
   try{
-    for(let i=0;i<pages.length;i++){
-      const canvas=await html2canvas(pages[i],{
-        scale:2,
-        useCORS:true,
-        logging:false,
-        scrollX:0,
-        scrollY:0,
-        allowTaint:true,
-        backgroundColor:'#ffffff',
-        onclone:(documentClone,el)=>{
-          try{
-            const target=el||documentClone.querySelectorAll('.page')[i];
-            if(!target)return;
-            target.style.width=CAPTURE_W+'px';
-            target.style.maxWidth=CAPTURE_W+'px';
-            target.style.boxSizing='border-box';
-            target.style.minHeight='auto';
-            target.style.overflow='visible';
-            target.style.padding='24px 32px';
-            target.style.borderTop='none';
-            target.style.backgroundColor='#ffffff';
-            target.querySelectorAll('.bimg').forEach(img=>{
-              img.style.cssText='display:block;width:100%!important;margin:0 0 18px 0!important;height:auto!important';
-            });
-          }catch(e){}
-        }
-      });
-      if(!canvas||canvas.width===0||canvas.height===0) throw new Error('Não foi possível capturar o plano. Tente gerar novamente.');
-      if(i>0) pdf.addPage();
-      const imgData=canvas.toDataURL('image/jpeg',0.94);
-      const ratio=canvas.height/canvas.width;
-      let iW=cW, iH=iW*ratio;
-      const maxH=297-MT-MB;
-      if(iH>maxH){iH=maxH;iW=iH/ratio;}
-      if(!imgData||imgData==='data:,'||iW<=0||iH<=0) throw new Error('Imagem inválida na página '+(i+1)+'. Tente gerar o plano novamente.');
-      pdf.addImage(imgData,'JPEG',ML,MT,iW,iH);
-    }
+    const pdf=await _capturarEMontar();
     pdf.save(filename);
   }catch(err){
     console.error('PDF error:',err);
@@ -601,51 +613,9 @@ async function compartilharPlano(btn){
   if(docEl.querySelector('.em')){alert('Gere o plano primeiro antes de enviar.');return;}
   if(btn){btn.textContent='⏳ Preparando...';btn.disabled=true;}
   const restore=()=>{if(btn){btn.textContent='📤 Enviar ao Cliente';btn.disabled=false;}};
-
   const filename=gerarNomeArquivo();
-
-  if(!window.jspdf||!window.jspdf.jsPDF){
-    alert('Biblioteca PDF não carregou. Recarregue a página e tente novamente.');
-    restore(); return;
-  }
-
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
-  const ML=5,MR=5,MT=5,MB=5;
-  const cW=210-ML-MR;
-  const pages=Array.from(docEl.querySelectorAll('.page'));
-  const CAPTURE_W=800;
-
   try{
-    for(let i=0;i<pages.length;i++){
-      const canvas=await html2canvas(pages[i],{
-        scale:2,useCORS:true,logging:false,scrollX:0,scrollY:0,
-        allowTaint:true,backgroundColor:'#ffffff',
-        onclone:(documentClone,el)=>{
-          try{
-            const target=el||documentClone.querySelectorAll('.page')[i];
-            if(!target)return;
-            target.style.width=CAPTURE_W+'px';target.style.maxWidth=CAPTURE_W+'px';
-            target.style.boxSizing='border-box';target.style.minHeight='auto';
-            target.style.overflow='visible';target.style.padding='24px 32px';
-            target.style.borderTop='none';target.style.backgroundColor='#ffffff';
-            target.querySelectorAll('.bimg').forEach(img=>{
-              img.style.cssText='display:block;width:100%!important;margin:0 0 18px 0!important;height:auto!important';
-            });
-          }catch(e){}
-        }
-      });
-      if(!canvas||canvas.width===0||canvas.height===0) throw new Error('Não foi possível capturar o plano.');
-      if(i>0) pdf.addPage();
-      const imgData=canvas.toDataURL('image/jpeg',0.94);
-      const ratio=canvas.height/canvas.width;
-      let iW=cW,iH=iW*ratio;
-      const maxH=297-MT-MB;
-      if(iH>maxH){iH=maxH;iW=iH/ratio;}
-      pdf.addImage(imgData,'JPEG',ML,MT,iW,iH);
-    }
-
-    // Tenta Web Share API — funciona no iOS Safari e Chrome Android
+    const pdf=await _capturarEMontar();
     if(navigator.share){
       try{
         const blob=pdf.output('blob');
@@ -653,18 +623,15 @@ async function compartilharPlano(btn){
         await navigator.share({files:[file],title:'Plano Alimentar Personalizado',text:'Seu plano alimentar personalizado Herbalife 🌿'});
         restore(); return;
       }catch(shareErr){
-        if(shareErr.name==='AbortError'){restore();return;} // cancelou
-        // Share sem arquivos não suportado — faz download
+        if(shareErr.name==='AbortError'){restore();return;}
       }
     }
-    // Fallback: download direto
     pdf.save(filename);
-    alert('💡 Para enviar pelo WhatsApp: abra o arquivo PDF salvo → compartilhe via WhatsApp normalmente.');
+    alert('💡 Para enviar pelo WhatsApp: abra o PDF salvo e compartilhe por lá.');
   }catch(err){
     if(err&&err.name==='AbortError'){restore();return;}
     console.error('Share error:',err);
-    try{pdf.save(filename);}catch(e2){}
-    alert('Erro ao gerar: '+err.message);
+    alert('Erro: '+err.message);
   }
   restore();
 }
