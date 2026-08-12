@@ -503,23 +503,37 @@ function toggleLock(lockId,chkId){
   }
 }
 
-async function gerarPDF(btn){
-  const docEl=document.getElementById('doc');
-  if(docEl.querySelector('.em')){alert('Gere o plano primeiro antes de exportar o PDF.');return;}
-  if(btn){btn.textContent='⏳ Gerando PDF...';btn.disabled=true;}
-  const restore=()=>{if(btn){btn.textContent='🖨️ Imprimir / Salvar PDF';btn.disabled=false;}};
-
-  // Filename
+function gerarNomeArquivo(){
   const nomeRaw=(document.getElementById('nome')||{}).value||'';
   const partes=nomeRaw.trim().split(/\s+/);
   const primeiro=partes[0]||'Cliente';
   const ultimo=partes.length>1?partes[partes.length-1]:'';
+  const nomeLimpo=(primeiro+(ultimo?'_'+ultimo:'')).replace(/[^a-zA-ZÀ-ÿ0-9_]/g,'');
+
   const hoje=new Date();
   const dd=String(hoje.getDate()).padStart(2,'0');
   const mm=String(hoje.getMonth()+1).padStart(2,'0');
   const aaaa=hoje.getFullYear();
-  const nomeLimpo=(primeiro+(ultimo?'_'+ultimo:'')).replace(/[^a-zA-ZÀ-ÿ0-9_]/g,'');
-  const filename=`Avaliação_${nomeLimpo}_${dd}-${mm}-${aaaa}.pdf`;
+
+  // Detecta plataforma
+  const isMob=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||window.innerWidth<=768;
+  const plat=isMob?'mobile':'desk';
+
+  // Versão incremental por cliente (salva no localStorage)
+  const vKey='pdf_v_'+nomeLimpo.toLowerCase();
+  const v=(parseInt(localStorage.getItem(vKey)||'0')+1);
+  localStorage.setItem(vKey,String(v));
+
+  return `Avaliação_${nomeLimpo}_${dd}-${mm}-${aaaa}_${plat}_v${v}.pdf`;
+}
+
+async function gerarPDF(btn){
+  const docEl=document.getElementById('doc');
+  if(docEl.querySelector('.em')){alert('Gere o plano primeiro antes de exportar o PDF.');return;}
+  if(btn){btn.textContent='⏳ Gerando PDF...';btn.disabled=true;}
+  const restore=()=>{if(btn){btn.textContent='🖨️ Salvar PDF';btn.disabled=false;}};
+
+  const filename=gerarNomeArquivo();
 
   if(!window.jspdf||!window.jspdf.jsPDF){
     alert('Biblioteca PDF não carregou. Recarregue a página e tente novamente.');
@@ -588,17 +602,7 @@ async function compartilharPlano(btn){
   if(btn){btn.textContent='⏳ Preparando...';btn.disabled=true;}
   const restore=()=>{if(btn){btn.textContent='📤 Enviar ao Cliente';btn.disabled=false;}};
 
-  // Filename
-  const nomeRaw=(document.getElementById('nome')||{}).value||'';
-  const partes=nomeRaw.trim().split(/\s+/);
-  const primeiro=partes[0]||'Cliente';
-  const ultimo=partes.length>1?partes[partes.length-1]:'';
-  const hoje=new Date();
-  const dd=String(hoje.getDate()).padStart(2,'0');
-  const mm=String(hoje.getMonth()+1).padStart(2,'0');
-  const aaaa=hoje.getFullYear();
-  const nomeLimpo=(primeiro+(ultimo?'_'+ultimo:'')).replace(/[^a-zA-ZÀ-ÿ0-9_]/g,'');
-  const filename=`Plano_${nomeLimpo}_${dd}-${mm}-${aaaa}.pdf`;
+  const filename=gerarNomeArquivo();
 
   if(!window.jspdf||!window.jspdf.jsPDF){
     alert('Biblioteca PDF não carregou. Recarregue a página e tente novamente.');
