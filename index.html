@@ -44,7 +44,7 @@ input[type="date"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;-
 /* PREVIEW */
 .pp{flex:1;background:#e5e7eb;padding:22px;overflow-y:auto;height:calc(100vh - 48px)}
 .doc{background:#fff;width:800px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.12);border-radius:4px;overflow:hidden;font-family:Arial,sans-serif;font-size:12px;color:#222}
-.page{padding:30px 40px 70px;min-height:960px;position:relative}
+.page{padding:30px 40px;min-height:960px;display:flex;flex-direction:column}
 .page+.page{border-top:3px dashed #d1d5db}
 .bimg{width:calc(100% + 80px);margin:-30px -40px 22px;display:block;height:auto}
 
@@ -125,7 +125,7 @@ input[type="date"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;-
   .pg-num{display:block!important}
 }
 .pg-num{display:none;text-align:center;font-size:8pt;color:#9ca3af;padding:6mm 0 2mm;letter-spacing:.05em}
-.pdf-promo{display:flex;align-items:center;gap:12px;justify-content:center;background:#111827;padding:11px 18px;position:absolute;bottom:0;left:0;right:0;width:100%;margin:0;border-radius:0}
+.pdf-promo{display:flex;align-items:center;gap:12px;justify-content:center;background:#111827;padding:11px 18px;margin-top:auto;margin-left:-40px;margin-right:-40px;margin-bottom:-30px;width:calc(100% + 80px);border-radius:0}
 .promo-txt{color:#9ca3af;font-size:10px;font-family:Arial,sans-serif;line-height:1.5;text-align:center}
 .promo-txt strong{color:#e5e7eb;font-weight:700}
 .promo-url{color:#a3e635!important;font-weight:700}
@@ -589,10 +589,10 @@ async function _capturarEMontar(){
           t.querySelectorAll('.bimg').forEach(img=>{
             img.style.cssText='display:block;width:calc(100% + 64px)!important;margin:0 -32px 18px!important;height:auto!important;max-width:none!important';
           });
-          // rodapé promo: no PDF tira o absolute e usa margens full-bleed
-          t.style.paddingBottom='16px';
+          // rodapé promo: PDF usa display:block na página (cancela flex) e margem full-bleed no footer
+          t.style.display='block';
           t.querySelectorAll('.pdf-promo').forEach(el=>{
-            el.style.cssText='display:flex;align-items:center;gap:12px;justify-content:center;background:#111827;padding:11px 18px;position:static!important;width:calc(100% + 64px)!important;margin:16px -32px -16px!important;border-radius:0';
+            el.style.cssText='display:flex;align-items:center;gap:12px;justify-content:center;background:#111827;padding:11px 18px;margin-top:20px;margin-left:-32px;margin-right:-32px;margin-bottom:-32px;width:calc(100% + 64px);border-radius:0';
           });
         }catch(e){}
       }
