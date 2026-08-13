@@ -556,6 +556,42 @@ function gerarNomeArquivo(){
   return `Avaliação_${nomeLimpo}_${dd}-${mm}-${aaaa}_${plat}_v${v}.pdf`;
 }
 
+// Desenha o rodapé Upday diretamente no jsPDF (sempre no fundo da página)
+function _drawPromoFooter(pdf, pageW, pageH){
+  const fH=12, fy=pageH-fH;
+  // fundo escuro
+  pdf.setFillColor(17,24,39);
+  pdf.rect(0,fy,pageW,fH,'F');
+  // caixa do "U"
+  pdf.setFillColor(0,0,0);
+  pdf.roundedRect(8,fy+2,8,8,1.5,1.5,'F');
+  pdf.setFont('helvetica','bolditalic');
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(163,230,53);
+  pdf.text('U',12,fy+8.2,{align:'center'});
+  // partes de texto com cores diferentes
+  pdf.setFontSize(7);
+  const ty=fy+7.5;
+  const p1='Acompanhe seu progresso com o ';
+  const p2='Upday';
+  const p3=' — app gratuito   ·   ';
+  const p4='app.updayapp.com.br';
+  pdf.setFont('helvetica','normal');
+  const w1=pdf.getTextWidth(p1);
+  pdf.setFont('helvetica','bold');
+  const w2=pdf.getTextWidth(p2);
+  pdf.setFont('helvetica','normal');
+  const w3=pdf.getTextWidth(p3);
+  pdf.setFont('helvetica','bold');
+  const w4=pdf.getTextWidth(p4);
+  let cx=(pageW-(w1+w2+w3+w4))/2;
+  pdf.setFont('helvetica','normal'); pdf.setTextColor(156,163,175); pdf.text(p1,cx,ty); cx+=w1;
+  pdf.setFont('helvetica','bold');   pdf.setTextColor(229,231,235); pdf.text(p2,cx,ty); cx+=w2;
+  pdf.setFont('helvetica','normal'); pdf.setTextColor(156,163,175); pdf.text(p3,cx,ty); cx+=w3;
+  pdf.setFont('helvetica','bold');   pdf.setTextColor(163,230,53);  pdf.text(p4,cx,ty);
+  try{ pdf.link(cx,fy+3,w4,6,{url:'https://app.updayapp.com.br/'}); }catch(e){}
+}
+
 // Helper: captura todas as páginas e monta jsPDF com altura variável por página
 // Isso garante que o cabeçalho tenha SEMPRE a mesma largura (200mm) em todas as páginas
 async function _capturarEMontar(){
@@ -589,11 +625,8 @@ async function _capturarEMontar(){
           t.querySelectorAll('.bimg').forEach(img=>{
             img.style.cssText='display:block;width:calc(100% + 64px)!important;margin:0 -32px 18px!important;height:auto!important;max-width:none!important';
           });
-          // rodapé promo: PDF usa display:block na página (cancela flex) e margem full-bleed no footer
-          t.style.display='block';
-          t.querySelectorAll('.pdf-promo').forEach(el=>{
-            el.style.cssText='display:flex;align-items:center;gap:12px;justify-content:center;background:#111827;padding:11px 18px;margin-top:20px;margin-left:-32px;margin-right:-32px;margin-bottom:-32px;width:calc(100% + 64px);border-radius:0';
-          });
+          // rodapé promo: oculto no canvas — será desenhado pelo jsPDF fixo no fundo de cada página
+          t.querySelectorAll('.pdf-promo').forEach(el=>{ el.style.display='none'; });
         }catch(e){}
       }
     });
@@ -606,7 +639,8 @@ async function _capturarEMontar(){
   //    iW é SEMPRE cW=200mm → cabeçalho idêntico e do mesmo tamanho em toda página
   const maxH=Math.max(...canvases.map(c=>c.height));
   const iW=cW; // 200mm fixo
-  const uniformPageH=Math.ceil(iW*(maxH/canvases[0].width)+MT+MB);
+  const FOOTER_H=12; // mm — altura do rodapé Upday desenhado pelo jsPDF
+  const uniformPageH=Math.ceil(iW*(maxH/canvases[0].width)+MT+MB)+FOOTER_H;
 
   let pdf=null;
   for(let i=0;i<canvases.length;i++){
@@ -620,8 +654,10 @@ async function _capturarEMontar(){
     } else {
       pdf.addPage([210,uniformPageH]);
     }
-    // Imagem em tamanho natural (sem esticar) — espaço em branco fica embaixo nas páginas curtas
+    // Imagem em tamanho natural (sem esticar) — espaço em branco fica entre conteúdo e rodapé
     pdf.addImage(imgData,'JPEG',ML,MT,iW,naturalH);
+    // Rodapé sempre fixo no fundo de cada página (desenhado pelo jsPDF)
+    _drawPromoFooter(pdf,210,uniformPageH);
   }
   return pdf;
 }
